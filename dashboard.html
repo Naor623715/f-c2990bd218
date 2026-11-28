@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Frame Dashboard</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --card: #ffffff; --text: #1d1d1b; --muted: #6b6a66; --line: #e2e0da;
+    --accent: #2f6f5e; --accent-text: #ffffff; --ok: #2f7d3b; --bad: #b3261e; --warn: #9a6b00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141413; --card: #1e1e1c; --text: #ecebe6; --muted: #a09f99; --line: #33332f;
+            --accent: #5fb39b; --accent-text: #0e1a16; --ok: #6cc47a; --bad: #f08a80; --warn: #e0b04a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Arial, sans-serif; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--card); position: sticky; top: 0; z-index: 2; }
+  header h1 { font-size: 18px; margin: 0; }
+  nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  nav button { background: none; border: 0; padding: 6px 12px; border-radius: 8px; color: var(--muted); font: inherit; cursor: pointer; }
+  nav button.active { background: var(--bg); color: var(--text); font-weight: 600; }
+  main { max-width: 980px; margin: 0 auto; padding: 20px; }
+  section.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
+  section.card h2 { font-size: 16px; margin: 0 0 12px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  button.primary, button.secondary { font: inherit; border-radius: 8px; padding: 8px 16px; cursor: pointer; border: 1px solid var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-text); }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  img.today { width: 100%; border-radius: 8px; display: block; background: var(--bg); }
+  pre.prompt { white-space: pre-wrap; direction: ltr; text-align: left; background: var(--bg); padding: 12px; border-radius: 8px; font-size: 13px; max-height: 420px; overflow: auto; margin: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: right; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; }
+  .badge { padding: 2px 8px; border-radius: 99px; font-size: 12px; border: 1px solid currentColor; white-space: nowrap; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); } .skip { color: var(--muted); }
+  label.field { display: block; margin-bottom: 14px; }
+  label.field > span { display: block; font-weight: 600; margin-bottom: 4px; }
+  label.field > small { display: block; color: var(--muted); margin-bottom: 4px; }
+  input[type=text], input[type=number], input[type=time], textarea, select {
+    width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  textarea { min-height: 70px; resize: vertical; }
+  .ltr { direction: ltr; text-align: left; }
+  fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px 2px; margin: 0 0 16px; }
+  legend { font-weight: 700; padding: 0 6px; }
+  textarea.code { font: 13px/1.5 ui-monospace, Consolas, "Courier New", monospace; min-height: 480px; white-space: pre; overflow: auto; tab-size: 4; }
+  .msg { margin-top: 10px; font-size: 14px; min-height: 1.4em; }
+  .hidden { display: none !important; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Family Frame</h1>
+  <nav id="nav" class="hidden">
+    <button data-tab="today" class="active">היום</button>
+    <button data-tab="settings">הגדרות</button>
+    <button data-tab="code">קוד</button>
+    <button id="logout" title="מחיקת הטוקן מהדפדפן הזה">התנתקות</button>
+  </nav>
+</header>
+
+<main>
+  <section class="card" id="login">
+    <h2>כניסה</h2>
+    <p>הדאשבורד עובד מול הריפו הפרטי שלך ב-GitHub בעזרת טוקן אישי. הטוקן נשמר רק בדפדפן הזה ונשלח רק ל-GitHub.</p>
+    <ol class="muted">
+      <li>פתח את <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">יצירת טוקן חדש (Fine-grained)</a>.</li>
+      <li>תחת Repository access בחר <b>Only select repositories</b> ← <b>family-frame</b>.</li>
+      <li>תחת Permissions תן <b>Read and write</b> ל-Actions, Contents ו-Workflows.</li>
+      <li>צור את הטוקן והדבק אותו כאן.</li>
+    </ol>
+    <div class="row">
+      <input type="text" id="token-input" class="ltr" placeholder="github_pat_..." autocomplete="off" spellcheck="false">
+      <button class="primary" id="token-save">כניסה</button>
+    </div>
+    <div class="msg" id="login-msg"></div>
+  </section>
+
+  <div id="app" class="hidden">
+    <div data-panel="today">
+      <section class="card">
+        <div class="row" style="justify-content: space-between">
+          <h2 style="margin: 0">התמונה של היום</h2>
+          <div class="row">
+            <button class="secondary" id="refresh-today">רענון</button>
+            <button class="primary" id="generate-now">צור תמונה עכשיו</button>
+          </div>
+        </div>
+        <p class="muted" id="status-line">טוען...</p>
+        <img class="today" id="today-img" alt="התמונה של היום">
+        <div class="msg" id="today-msg"></div>
+      </section>
+
+      <section class="card">
+        <h2>ריצות אחרונות</h2>
+        <table>
+          <thead><tr><th>מתי</th><th>סוג</th><th>תוצאה</th><th>משך</th><th></th></tr></thead>
+          <tbody id="runs"><tr><td colspan="5" class="muted">טוען...</td></tr></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>הפרומפט שנשלח בריצה האחרונה</h2>
+        <pre class="prompt" id="prompt">טוען...</pre>
+      </section>
+    </div>
+
+    <div data-panel="settings" class="hidden">
+      <section class="card">
+        <h2>הגדרות</h2>
+        <p class="muted">השינויים נכנסים לתוקף ביצירה הבאה. שינוי שעת הריצה מעדכן גם את התזמון ב-GitHub.</p>
+        <form id="settings-form"></form>
+        <div class="row">
+          <button class="primary" id="settings-save">שמירה</button>
+          <button class="secondary" id="settings-save-run">שמירה ויצירת תמונה עכשיו</button>
+        </div>
+        <div class="msg" id="settings-msg"></div>
+      </section>
+    </div>
+
+    <div data-panel="code" class="hidden">
+      <section class="card">
+        <h2>עריכת קוד</h2>
+        <p class="muted">כל שמירה היא commit בריפו, אז אפשר תמיד לחזור אחורה דרך <a id="history-link" target="_blank" rel="noopener">היסטוריית השינויים</a>.
+          שינוי בקבצים תחת <code>site/</code> נכנס לתוקף רק אחרי "פרסום הדפים מחדש".</p>
+        <div class="row" style="margin-bottom: 10px">
+          <select id="file-select" class="ltr" style="flex: 1; min-width: 220px"></select>
+          <button class="secondary" id="file-reload">טעינה מחדש</button>
+        </div>
+        <textarea id="code" class="code ltr" spellcheck="false" wrap="off"></textarea>
+        <div class="row" style="margin-top: 10px">
+          <input type="text" id="commit-msg" placeholder="תיאור השינוי (לא חובה)">
+          <button class="primary" id="file-save">שמירה</button>
+          <button class="secondary" id="republish">פרסום הדפים מחדש</button>
+        </div>
+        <div class="msg" id="code-msg"></div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script>
+const OWNER = 'Naor623715';
+const REPO = 'family-frame';
+const WORKFLOW = 'daily.yml';
+const WORKFLOW_PATH = '.github/workflows/' + WORKFLOW;
+const API = 'https://api.github.com';
+const TOKEN_KEY = 'ff_token';
+const $ = id => document.getElementById(id);
+
+const SETTINGS = [
+  { group: 'סגנונות ציור ולבוש', fields: [
+    { key: 'art_styles', label: 'סגנונות ציור', hint: 'שורה לכל סגנון. בכל יום נבחר אחד באקראי.', type: 'list' },
+    { key: 'clothing_styles', label: 'סגנונות לבוש להורים', hint: 'שורה לכל סגנון. בכל יום נבחר אחד באקראי.', type: 'list' },
+  ]},
+  { group: 'פרטי משפחה וכללי פרומפט', fields: [
+    { key: 'parents_description', label: 'תיאור ההורים', type: 'textarea' },
+    { key: 'child_description', label: 'תיאור אמי', type: 'textarea' },
+    { key: 'work_shift_text', label: 'מה מציירים כשיש לנאור משמרת', type: 'text' },
+    { key: 'kindergarten_text', label: 'איך לתאר את המילה "גן" ביומן של אמי', type: 'text' },
+    { key: 'no_kindergarten_text', label: 'איך לתאר יום חופש מהגן', type: 'text' },
+    { key: 'special_occasion_keywords', label: 'מילות מפתח לאירוע מיוחד', hint: 'שורה לכל מילה. אירוע ביומן שמכיל אחת מהן יקבל הדגשה חגיגית.', type: 'list' },
+    { key: 'mood', label: 'אווירה', type: 'textarea' },
+    { key: 'text_rule', label: 'כלל טקסט בתמונה', type: 'textarea' },
+    { key: 'allow_holiday_sign', label: 'לאפשר שלט ברכה בעברית בימי חג', type: 'bool' },
+    { key: 'allow_occasion_sign', label: 'לאפשר שלט בעברית באירוע מיוחד', type: 'bool' },
+    { key: 'extra_instructions', label: 'הנחיות נוספות', hint: 'טקסט חופשי שמתווסף לסוף הפרומפט. עדיף באנגלית.', type: 'textarea' },
+  ]},
+  { group: 'שעות ריצה והתראות', fields: [
+    { key: 'run_time', label: 'שעת יצירת התמונה (שעון ישראל)', hint: 'GitHub לפעמים מתעכב בכמה דקות.', type: 'time' },
+    { key: 'notify_not_before', label: 'לא לשלוח התראות לפני', type: 'time' },
+    { key: 'retry_attempts', label: 'מספר ניסיונות כשיש כשל', type: 'number', min: 1, max: 10 },
+    { key: 'retry_wait_minutes', label: 'דקות המתנה בין ניסיונות', type: 'number', min: 1, max: 30 },
+  ]},
+  { group: 'מזג אוויר ומודל', fields: [
+    { key: 'weather_lat', label: 'קו רוחב לתחזית', type: 'number', step: 'any' },
+    { key: 'weather_lon', label: 'קו אורך לתחזית', type: 'number', step: 'any' },
+    { key: 'model', label: 'מודל Gemini', type: 'text', ltr: true },
+    { key: 'aspect_ratio', label: 'יחס גובה-רוחב', type: 'select', options: ['16:9', '21:9', '3:2', '4:3', '1:1'] },
+  ]},
+];
+
+let token = null;
+let config = null, configSha = null;
+let currentFile = null, currentSha = null;
+let pollTimer = null;
+
+function decodeB64(b64) {
+  const bin = atob(b64.replace(/\n/g, ''));
+  return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+}
+function encodeB64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+async function gh(path, options = {}) {
+  const res = await fetch(API + path, {
+    ...options,
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    },
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json()).message || ''; } catch (e) {}
+    const err = new Error(`GitHub ${res.status}${detail ? ': ' + detail : ''}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+async function getFile(path, ref) {
+  const q = ref ? `?ref=${encodeURIComponent(ref)}` : '';
+  const data = await gh(`/repos/${OWNER}/${REPO}/contents/${path.split('/').map(encodeURIComponent).join('/')}${q}`);
+  return { text: decodeB64(data.content), sha: data.sha };
+}
+
+async function putFile(path, text, sha, message) {
+  const data = await gh(`/repos/${OWNER}/${REPO}/contents/${path.split('/').map(encodeURIComponent).join('/')}`, {
+    method: 'PUT',
+    body: JSON.stringify({ message, content: encodeB64(text), sha }),
+  });
+  return data.content.sha;
+}
+
+function setMsg(id, text, cls) {
+  const el = $(id);
+  el.textContent = text;
+  el.className = 'msg' + (cls ? ' ' + cls : '');
+}
+
+function fmtTime(iso) {
+  return new Date(iso).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', weekday: 'short', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// ---------- login ----------
+async function tryLogin(candidate) {
+  token = candidate;
+  try {
+    await gh(`/repos/${OWNER}/${REPO}`);
+  } catch (e) {
+    token = null;
+    throw e;
+  }
+  try { localStorage.setItem(TOKEN_KEY, candidate); } catch (e) {}
+  $('login').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  $('nav').classList.remove('hidden');
+  $('history-link').href = `https://github.com/${OWNER}/${REPO}/commits/main`;
+  loadToday();
+}
+
+$('token-save').onclick = async () => {
+  const value = $('token-input').value.trim();
+  if (!value) return;
+  setMsg('login-msg', 'בודק...');
+  try {
+    await tryLogin(value);
+    $('token-input').value = '';
+  } catch (e) {
+    setMsg('login-msg', e.status === 401 || e.status === 404 ? 'הטוקן לא תקין או שאין לו גישה לריפו family-frame.' : e.message, 'bad');
+  }
+};
+
+$('logout').onclick = () => {
+  try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+  location.reload();
+};
+
+// ---------- tabs ----------
+document.querySelectorAll('nav button[data-tab]').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('nav button[data-tab]').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('[data-panel]').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== btn.dataset.tab));
+    if (btn.dataset.tab === 'settings' && !config) loadSettings();
+    if (btn.dataset.tab === 'code' && !$('file-select').options.length) loadFileList();
+  };
+});
+
+// ---------- today ----------
+async function loadToday() {
+  $('today-img').src = 'today.jpg?t=' + Date.now();
+  loadStatus();
+  loadRuns();
+}
+
+async function loadStatus() {
+  try {
+    const status = JSON.parse((await getFile('status.json', 'status')).text);
+    const ok = status.ok ? '<span class="badge ok">הצליחה</span>' : '<span class="badge bad">נכשלה</span>';
+    $('status-line').innerHTML = `יצירה אחרונה: ${fmtTime(status.finished_at)} ${ok}`;
+    $('prompt').textContent = (await getFile('prompt.txt', 'status')).text || '(אין פרומפט שמור)';
+  } catch (e) {
+    $('status-line').textContent = e.status === 404 ? 'עדיין אין נתוני ריצה שמורים.' : 'שגיאה בטעינת הסטטוס: ' + e.message;
+    $('prompt').textContent = e.status === 404 ? '(עדיין אין פרומפט שמור)' : '';
+  }
+}
+
+async function loadRuns() {
+  try {
+    const data = await gh(`/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW}/runs?per_page=10`);
+    const rows = await Promise.all(data.workflow_runs.map(async run => {
+      let result;
+      if (run.status !== 'completed') {
+        result = '<span class="badge warn">רצה עכשיו</span>';
+      } else if (run.conclusion !== 'success') {
+        result = '<span class="badge bad">נכשלה</span>';
+      } else {
+        let generated = true;
+        try {
+          const jobs = await gh(`/repos/${OWNER}/${REPO}/actions/runs/${run.id}/jobs`);
+          const step = (jobs.jobs[0]?.steps || []).find(s => s.name === 'Generate image');
+          generated = !!step && step.conclusion === 'success';
+        } catch (e) {}
+        result = generated ? '<span class="badge ok">תמונה נוצרה</span>' : '<span class="badge skip">דילוג</span>';
+      }
+      const kind = run.event === 'schedule' ? 'מתוזמנת' : 'ידנית';
+      const secs = (new Date(run.updated_at) - new Date(run.run_started_at)) / 1000;
+      const dur = run.status === 'completed' ? (secs < 60 ? `${Math.round(secs)} שנ'` : `${Math.round(secs / 60)} דק'`) : '';
+      return { run, kind, result, dur };
+    }));
+    const tbody = $('runs');
+    tbody.innerHTML = '';
+    for (const { run, kind, result, dur } of rows) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td></td><td></td><td>${result}</td><td></td><td><a target="_blank" rel="noopener">לוג</a></td>`;
+      tr.children[0].textContent = fmtTime(run.run_started_at);
+      tr.children[1].textContent = kind;
+      tr.children[3].textContent = dur;
+      tr.querySelector('a').href = run.html_url;
+      tbody.appendChild(tr);
+    }
+    if (!rows.length) tbody.innerHTML = '<tr><td colspan="5" class="muted">אין ריצות עדיין.</td></tr>';
+    const running = data.workflow_runs.some(r => r.status !== 'completed');
+    clearTimeout(pollTimer);
+    if (running) {
+      pollTimer = setTimeout(loadRuns, 15000);
+      $('generate-now').disabled = true;
+    } else {
+      if ($('generate-now').disabled) {
+        $('generate-now').disabled = false;
+        setMsg('today-msg', 'הריצה הסתיימה. התמונה באתר מתעדכנת תוך דקה-שתיים, אחר כך לחץ "רענון".', 'ok');
+        loadStatus();
+      }
+    }
+  } catch (e) {
+    $('runs').innerHTML = '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="5" class="bad"></td>';
+    tr.firstChild.textContent = 'שגיאה בטעינת הריצות: ' + e.message;
+    $('runs').appendChild(tr);
+  }
+}
+
+async function dispatch(publishOnly) {
+  await gh(`/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW}/dispatches`, {
+    method: 'POST',
+    body: JSON.stringify({ ref: 'main', inputs: { publish_only: publishOnly } }),
+  });
+  setTimeout(loadRuns, 4000);
+}
+
+$('refresh-today').onclick = loadToday;
+$('generate-now').onclick = async () => {
+  $('generate-now').disabled = true;
+  try {
+    await dispatch(false);
+    setMsg('today-msg', 'הריצה התחילה. בדרך כלל זה לוקח כ-2 דקות.', 'warn');
+  } catch (e) {
+    $('generate-now').disabled = false;
+    setMsg('today-msg', 'הפעלת הריצה נכשלה: ' + e.message, 'bad');
+  }
+};
+
+// ---------- settings ----------
+async function loadSettings() {
+  setMsg('settings-msg', 'טוען...');
+  try {
+    const file = await getFile('config.json');
+    config = JSON.parse(file.text);
+    configSha = file.sha;
+    renderSettings();
+    setMsg('settings-msg', '');
+  } catch (e) {
+    setMsg('settings-msg', 'שגיאה בטעינת ההגדרות: ' + e.message, 'bad');
+  }
+}
+
+function renderSettings() {
+  const form = $('settings-form');
+  form.innerHTML = '';
+  for (const group of SETTINGS) {
+    const fs = document.createElement('fieldset');
+    const legend = document.createElement('legend');
+    legend.textContent = group.group;
+    fs.appendChild(legend);
+    for (const f of group.fields) {
+      const label = document.createElement('label');
+      label.className = 'field';
+      const title = document.createElement('span');
+      title.textContent = f.label;
+      label.appendChild(title);
+      if (f.hint) { const s = document.createElement('small'); s.textContent = f.hint; label.appendChild(s); }
+      let input;
+      const value = config[f.key];
+      if (f.type === 'list') {
+        input = document.createElement('textarea');
+        input.value = (value || []).join('\n');
+        input.rows = Math.max(3, (value || []).length + 1);
+      } else if (f.type === 'textarea') {
+        input = document.createElement('textarea');
+        input.value = value ?? '';
+      } else if (f.type === 'select') {
+        input = document.createElement('select');
+        const opts = f.options.includes(value) ? f.options : [value, ...f.options];
+        for (const o of opts) { const opt = document.createElement('option'); opt.value = opt.textContent = o; input.appendChild(opt); }
+        input.value = value;
+      } else if (f.type === 'bool') {
+        input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = !!value;
+        input.style.width = 'auto';
+        title.prepend(input);
+        input.dataset.key = f.key;
+        input.dataset.type = f.type;
+        fs.appendChild(label);
+        continue;
+      } else {
+        input = document.createElement('input');
+        input.type = f.type;
+        input.value = value ?? '';
+        if (f.step) input.step = f.step;
+        if (f.min !== undefined) input.min = f.min;
+        if (f.max !== undefined) input.max = f.max;
+      }
+      if (f.ltr || f.type === 'number' || f.type === 'time') input.classList.add('ltr');
+      else if (f.type !== 'select') input.dir = 'auto';
+      input.dataset.key = f.key;
+      input.dataset.type = f.type;
+      label.appendChild(input);
+      fs.appendChild(label);
+    }
+    form.appendChild(fs);
+  }
+}
+
+function readSettings() {
+  const next = { ...config };
+  for (const el of $('settings-form').querySelectorAll('[data-key]')) {
+    const { key, type } = el.dataset;
+    if (type === 'list') next[key] = el.value.split('\n').map(s => s.trim()).filter(Boolean);
+    else if (type === 'bool') next[key] = el.checked;
+    else if (type === 'number') {
+      if (el.value === '' || isNaN(Number(el.value))) throw new Error(`הערך של "${el.closest('label').firstChild.textContent}" חייב להיות מספר`);
+      next[key] = Number(el.value);
+    }
+    else next[key] = el.value;
+  }
+  if (!next.art_styles.length || !next.clothing_styles.length) throw new Error('צריך לפחות סגנון ציור אחד וסגנון לבוש אחד.');
+  if (!/^\d\d:\d\d$/.test(next.run_time) || !/^\d\d:\d\d$/.test(next.notify_not_before)) throw new Error('שעה חייבת להיות בפורמט HH:MM.');
+  return next;
+}
+
+function cronForRunTime(runTime) {
+  const [h] = runTime.split(':').map(Number);
+  // Every 30 minutes at off-peak minutes, from run_time in summer (UTC+3) for 4 hours.
+  const hours = [0, 1, 2, 3].map(i => (h - 3 + i + 24) % 24).sort((a, b) => a - b);
+  return `17,47 ${hours.join(',')} * * *`;
+}
+
+async function saveSettings(runAfter) {
+  let next;
+  try { next = readSettings(); } catch (e) { setMsg('settings-msg', e.message, 'bad'); return; }
+  $('settings-save').disabled = $('settings-save-run').disabled = true;
+  setMsg('settings-msg', 'שומר...');
+  try {
+    if (next.run_time !== config.run_time) {
+      const wf = await getFile(WORKFLOW_PATH);
+      const updated = wf.text.replace(/cron: "[^"]*"/, `cron: "${cronForRunTime(next.run_time)}"`);
+      if (updated === wf.text) throw new Error('לא נמצאה שורת התזמון בקובץ ה-workflow');
+      await putFile(WORKFLOW_PATH, updated, wf.sha, `Dashboard: run time ${next.run_time}`);
+    }
+    configSha = await putFile('config.json', JSON.stringify(next, null, 2) + '\n', configSha, 'Dashboard: update settings');
+    config = next;
+    if (runAfter) {
+      await dispatch(false);
+      setMsg('settings-msg', 'נשמר, והתחילה יצירה של תמונה חדשה. אפשר לעקוב בלשונית "היום".', 'ok');
+    } else {
+      setMsg('settings-msg', 'נשמר. ייכנס לתוקף ביצירה הבאה.', 'ok');
+    }
+  } catch (e) {
+    setMsg('settings-msg', (e.status === 409 ? 'הקובץ השתנה בינתיים. טען את הדף מחדש ונסה שוב. ' : 'השמירה נכשלה: ') + e.message, 'bad');
+  } finally {
+    $('settings-save').disabled = $('settings-save-run').disabled = false;
+  }
+}
+
+$('settings-save').onclick = e => { e.preventDefault(); saveSettings(false); };
+$('settings-save-run').onclick = e => { e.preventDefault(); saveSettings(true); };
+$('settings-form').onsubmit = e => e.preventDefault();
+
+// ---------- code ----------
+const EDITABLE = /\.(py|json|ya?ml|txt|html|md)$/i;
+
+async function loadFileList() {
+  try {
+    const tree = await gh(`/repos/${OWNER}/${REPO}/git/trees/main?recursive=1`);
+    const files = tree.tree.filter(t => t.type === 'blob' && EDITABLE.test(t.path)).map(t => t.path).sort();
+    const sel = $('file-select');
+    sel.innerHTML = '';
+    for (const path of files) { const o = document.createElement('option'); o.value = o.textContent = path; sel.appendChild(o); }
+    sel.value = files.includes('build_prompt.py') ? 'build_prompt.py' : files[0];
+    openFile(sel.value);
+  } catch (e) {
+    setMsg('code-msg', 'שגיאה בטעינת רשימת הקבצים: ' + e.message, 'bad');
+  }
+}
+
+let dirty = false;
+async function openFile(path) {
+  setMsg('code-msg', 'טוען...');
+  try {
+    const file = await getFile(path);
+    currentFile = path;
+    currentSha = file.sha;
+    $('code').value = file.text;
+    dirty = false;
+    setMsg('code-msg', '');
+  } catch (e) {
+    setMsg('code-msg', 'שגיאה בפתיחת הקובץ: ' + e.message, 'bad');
+  }
+}
+
+$('file-select').onchange = e => {
+  if (dirty && !confirm('יש שינויים שלא נשמרו. לעבור קובץ בכל זאת?')) { e.target.value = currentFile; return; }
+  openFile(e.target.value);
+};
+$('file-reload').onclick = () => {
+  if (dirty && !confirm('לבטל את השינויים שלא נשמרו?')) return;
+  openFile(currentFile);
+};
+$('code').oninput = () => { dirty = true; };
+$('code').onkeydown = e => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const el = e.target, s = el.selectionStart;
+    el.setRangeText('    ', s, el.selectionEnd, 'end');
+    dirty = true;
+  }
+};
+
+$('file-save').onclick = async () => {
+  if (!currentFile) return;
+  let text = $('code').value;
+  if (currentFile.endsWith('.json')) {
+    try { JSON.parse(text); } catch (e) { setMsg('code-msg', 'JSON לא תקין: ' + e.message, 'bad'); return; }
+  }
+  const message = $('commit-msg').value.trim() || `Dashboard: edit ${currentFile}`;
+  $('file-save').disabled = true;
+  setMsg('code-msg', 'שומר...');
+  try {
+    currentSha = await putFile(currentFile, text, currentSha, message);
+    dirty = false;
+    $('commit-msg').value = '';
+    if (currentFile === 'config.json') config = null;
+    setMsg('code-msg', currentFile.startsWith('site/') ? 'נשמר. לחץ "פרסום הדפים מחדש" כדי שזה יופיע באתר.' : 'נשמר. ייכנס לתוקף ביצירה הבאה.', 'ok');
+  } catch (e) {
+    setMsg('code-msg', (e.status === 409 ? 'הקובץ השתנה בינתיים. טען מחדש ונסה שוב. ' : 'השמירה נכשלה: ') + e.message, 'bad');
+  } finally {
+    $('file-save').disabled = false;
+  }
+};
+
+$('republish').onclick = async () => {
+  try {
+    await dispatch(true);
+    setMsg('code-msg', 'הפרסום התחיל, הדפים יתעדכנו תוך כ-2 דקות.', 'ok');
+  } catch (e) {
+    setMsg('code-msg', 'הפרסום נכשל: ' + e.message, 'bad');
+  }
+};
+
+window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+// ---------- start ----------
+(async () => {
+  let saved = null;
+  try { saved = localStorage.getItem(TOKEN_KEY); } catch (e) {}
+  if (saved) {
+    try { await tryLogin(saved); } catch (e) { setMsg('login-msg', 'הטוקן השמור כבר לא עובד, צריך להזין חדש.', 'bad'); }
+  }
+})();
+</script>
+</body>
+</html>
